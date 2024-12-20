@@ -31,6 +31,8 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 error PredictionMarketEngine_PredictionMarketTokenTransferFailed(address from, address to, uint256 amount);
+error PredictionMarketEngine__ClaimWinningsInvalidMarketOutcome(uint256 marketId);
+error PredictionMarketEngine__UserHasNoWinningsToClaim(uint256 _marketId, address user, uint256 amount);
 
 contract PredictionMarketEngine is Ownable, ReentrancyGuard {
     enum MarketOutcome {
@@ -122,5 +124,76 @@ contract PredictionMarketEngine is Ownable, ReentrancyGuard {
         market.resolved = true;
 
         emit MarketResolved(_marketId, _marketOutcome);
+    }
+
+    function claimWinnings(uint256 _marketId) external nonReentrant {
+        Market storage market = markets[_marketId];
+
+        require(market.hasClaimed[msg.sender] == false, "User has already claimed rewards");
+        require(market.resolved, "Market has not resolved yet");
+
+        uint256 winningShares;
+        uint256 losingShares;
+        uint256 userWinningShares;
+
+        if (market.outcome == MarketOutcome.OPTION_A) {
+            winningShares = market.totalOptionAShares;
+            losingShares = market.totalOptionBShares;
+            userWinningShares = market.userSharesA[msg.sender];
+        } else if (market.outcome == MarketOutcome.OPTION_B) {
+            winningShares = market.totalOptionBShares;
+            losingShares = market.totalOptionAShares;
+            userWinningShares = market.userSharesB[msg.sender];
+        } else {
+            revert PredictionMarketEngine__ClaimWinningsInvalidMarketOutcome(_marketId);
+        }
+
+        if (userWinningShares == 0) {
+            revert PredictionMarketEngine__UserHasNoWinningsToClaim(_marketId, msg.sender, userWinningShares);
+        }
+
+        // alice - 4A
+        // bob - 11A
+        // alice - 2B
+        // tom - 1B
+
+        // market.outcome = A
+
+        // winning(A) = 15
+        // losing(B) = 3
+
+        // alice = 4  +  (4*3)/15
+        // bob   = 11 +  (11*3)/15
+        // tom   = 0
+        uint256 rewardRatio = (losingShares * 1e18) / winningShares;
+        uint256 winnings = (userWinningShares * 1e18 + userWinningShares * rewardRatio) / 1e18;
+
+        require(predictionMarketToken.balanceOf(address(this)) >= winnings, "Insufficient contract balance");
+
+        market.hasClaimed[msg.sender] = true;
+
+        bool isSuccess = predictionMarketToken.transfer(msg.sender, winnings);
+
+        if (!isSuccess) {
+            revert PredictionMarketEngine_PredictionMarketTokenTransferFailed(address(this), msg.sender, winnings);
+        }
+
+        emit MarketClaimed(_marketId, msg.sender, winnings);
+    }
+
+    function getMarketQuestion(uint256 _marketId) external view returns (string memory) {
+        return markets[_marketId].question;
+    }
+
+    function getMarketSharesA(uint256 _marketId, address _user) external view returns (uint256) {
+        return markets[_marketId].userSharesA[_user];
+    }
+
+    function getMarketSharesB(uint256 _marketId, address _user) external view returns (uint256) {
+        return markets[_marketId].userSharesB[_user];
+    }
+
+    function getMarketOutcome(uint256 _marketId) external view returns (MarketOutcome) {
+        return markets[_marketId].outcome;
     }
 }
