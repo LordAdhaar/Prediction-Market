@@ -26,8 +26,9 @@ contract PredictionMarketEngineTest is Test {
     }
 
     function testConstructor() external {
-        assertEq(address(predictionMarketEngine.owner()), owner);
-        assertEq(address(predictionMarketEngine.predictionMarketToken()), address(predictionMarketToken));
+        assertEq(predictionMarketEngine.getOwner(), owner);
+        assertEq(predictionMarketEngine.getPredictionMarketToken(), address(predictionMarketToken));
+
         assertEq(predictionMarketToken.balanceOf(alice), STARTING_BALANCE);
         assertEq(predictionMarketToken.balanceOf(bob), STARTING_BALANCE);
         assertEq(predictionMarketToken.balanceOf(tom), STARTING_BALANCE);

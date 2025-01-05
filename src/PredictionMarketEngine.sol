@@ -129,8 +129,8 @@ contract PredictionMarketEngine is Ownable, ReentrancyGuard {
     function claimWinnings(uint256 _marketId) external nonReentrant {
         Market storage market = markets[_marketId];
 
-        require(market.hasClaimed[msg.sender] == false, "User has already claimed rewards");
         require(market.resolved, "Market has not resolved yet");
+        require(market.hasClaimed[msg.sender] == false, "User has already claimed rewards");
 
         uint256 winningShares;
         uint256 losingShares;
@@ -140,10 +140,12 @@ contract PredictionMarketEngine is Ownable, ReentrancyGuard {
             winningShares = market.totalOptionAShares;
             losingShares = market.totalOptionBShares;
             userWinningShares = market.userSharesA[msg.sender];
+            market.userSharesA[msg.sender] = 0;
         } else if (market.outcome == MarketOutcome.OPTION_B) {
             winningShares = market.totalOptionBShares;
             losingShares = market.totalOptionAShares;
             userWinningShares = market.userSharesB[msg.sender];
+            market.userSharesB[msg.sender] = 0;
         } else {
             revert PredictionMarketEngine__ClaimWinningsInvalidMarketOutcome(_marketId);
         }
@@ -154,19 +156,20 @@ contract PredictionMarketEngine is Ownable, ReentrancyGuard {
 
         // alice - 4A
         // bob - 11A
-        // alice - 2B
-        // tom - 1B
+        // tom - 3B
 
         // market.outcome = A
 
         // winning(A) = 15
         // losing(B) = 3
 
-        // alice = 4  +  (4*3)/15
+        // alice = 4  +  (4*3)/15 = 4.8
         // bob   = 11 +  (11*3)/15
         // tom   = 0
+
         uint256 rewardRatio = (losingShares * 1e18) / winningShares;
-        uint256 winnings = (userWinningShares * 1e18 + userWinningShares * rewardRatio) / 1e18;
+
+        uint256 winnings = userWinningShares + (userWinningShares * rewardRatio) / 1e18;
 
         require(predictionMarketToken.balanceOf(address(this)) >= winnings, "Insufficient contract balance");
 
@@ -179,6 +182,37 @@ contract PredictionMarketEngine is Ownable, ReentrancyGuard {
         }
 
         emit MarketClaimed(_marketId, msg.sender, winnings);
+    }
+
+    function getOwner() external view returns (address) {
+        return owner();
+    }
+
+    function getPredictionMarketToken() external view returns (address) {
+        return address(predictionMarketToken);
+    }
+
+    function getMarketInfo(uint256 _marketId)
+        external
+        view
+        returns (uint256, string memory, string memory, string memory, uint256, uint256, bool, MarketOutcome)
+    {
+        Market storage market = markets[_marketId];
+        return (
+            market.endTime,
+            market.question,
+            market.optionA,
+            market.optionB,
+            market.totalOptionAShares,
+            market.totalOptionBShares,
+            market.resolved,
+            market.outcome
+        );
+    }
+
+    function getSharesBalance(uint256 _marketId, address _user) external view returns (uint256, uint256) {
+        Market storage market = markets[_marketId];
+        return (market.userSharesA[_user], market.userSharesB[_user]);
     }
 
     function getMarketQuestion(uint256 _marketId) external view returns (string memory) {
