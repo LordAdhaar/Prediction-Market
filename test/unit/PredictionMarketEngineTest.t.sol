@@ -38,7 +38,8 @@ contract PredictionMarketEngineTest is Test {
         vm.prank(owner);
         uint256 marketId = predictionMarketEngine.createMarket("Who will win the election?", "Alice", "Bob", 100);
 
-        assertEq(predictionMarketEngine.getMarketQuestion(marketId), "Who will win the election?");
+        (, string memory question,,,,,,) = predictionMarketEngine.getMarketInfo(marketId);
+        assertEq(question, "Who will win the election?");
     }
 
     function testBuyShares() external {
@@ -48,13 +49,17 @@ contract PredictionMarketEngineTest is Test {
         vm.startPrank(alice);
         predictionMarketToken.approve(address(predictionMarketEngine), 100);
         predictionMarketEngine.buyShares(marketId, true, 100);
-        assertEq(predictionMarketEngine.getMarketSharesA(marketId, alice), 100);
+
+        (uint256 aliceSharesA,) = predictionMarketEngine.getSharesBalance(marketId, alice);
+        assertEq(aliceSharesA, 100);
         vm.stopPrank();
 
         vm.startPrank(bob);
         predictionMarketToken.approve(address(predictionMarketEngine), 100);
         predictionMarketEngine.buyShares(marketId, false, 100);
-        assertEq(predictionMarketEngine.getMarketSharesA(marketId, bob), 0);
+
+        (uint256 bobSharesA,) = predictionMarketEngine.getSharesBalance(marketId, bob);
+        assertEq(bobSharesA, 0);
         vm.stopPrank();
     }
 
@@ -66,9 +71,8 @@ contract PredictionMarketEngineTest is Test {
 
         vm.prank(owner);
         predictionMarketEngine.resolveMarket(marketId, PredictionMarketEngine.MarketOutcome.OPTION_A);
-        assertEq(
-            uint8(predictionMarketEngine.getMarketOutcome(marketId)),
-            uint8(PredictionMarketEngine.MarketOutcome.OPTION_A)
-        );
+
+        (,,,,,,, PredictionMarketEngine.MarketOutcome marketOutcome) = predictionMarketEngine.getMarketInfo(marketId);
+        assertEq(uint8(marketOutcome), uint8(PredictionMarketEngine.MarketOutcome.OPTION_A));
     }
 }

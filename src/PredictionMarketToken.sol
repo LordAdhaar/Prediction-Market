@@ -8,7 +8,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 contract PredictionMarketToken is ERC20, Ownable {
     constructor(address initialOwner) ERC20("PredictionMarketToken", "PMT") Ownable(initialOwner) {}
 
-    function mint(address to, uint256 amount) public onlyOwner {
+    function mint(address to, uint256 amount) public {
         _mint(to, amount);
     }
 }

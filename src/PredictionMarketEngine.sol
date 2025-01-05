@@ -1,28 +1,3 @@
-// Layout of the contract file:
-// version
-// imports
-// errors
-// interfaces, libraries, contract
-// Inside Contract:
-//Type declarations
-// State variables
-// Events
-// Modifiers
-// Functions
-// Layout of Functions:
-// constructor
-// receive function (if exists)
-// fallback function (if exists)
-// external
-// public
-// internal
-// private
-// within function:
-// payable
-// non - payable
-// view
-// pure
-
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
@@ -154,19 +129,6 @@ contract PredictionMarketEngine is Ownable, ReentrancyGuard {
             revert PredictionMarketEngine__UserHasNoWinningsToClaim(_marketId, msg.sender, userWinningShares);
         }
 
-        // alice - 4A
-        // bob - 11A
-        // tom - 3B
-
-        // market.outcome = A
-
-        // winning(A) = 15
-        // losing(B) = 3
-
-        // alice = 4  +  (4*3)/15 = 4.8
-        // bob   = 11 +  (11*3)/15
-        // tom   = 0
-
         uint256 rewardRatio = (losingShares * 1e18) / winningShares;
 
         uint256 winnings = userWinningShares + (userWinningShares * rewardRatio) / 1e18;
@@ -213,21 +175,5 @@ contract PredictionMarketEngine is Ownable, ReentrancyGuard {
     function getSharesBalance(uint256 _marketId, address _user) external view returns (uint256, uint256) {
         Market storage market = markets[_marketId];
         return (market.userSharesA[_user], market.userSharesB[_user]);
-    }
-
-    function getMarketQuestion(uint256 _marketId) external view returns (string memory) {
-        return markets[_marketId].question;
-    }
-
-    function getMarketSharesA(uint256 _marketId, address _user) external view returns (uint256) {
-        return markets[_marketId].userSharesA[_user];
-    }
-
-    function getMarketSharesB(uint256 _marketId, address _user) external view returns (uint256) {
-        return markets[_marketId].userSharesB[_user];
-    }
-
-    function getMarketOutcome(uint256 _marketId) external view returns (MarketOutcome) {
-        return markets[_marketId].outcome;
     }
 }

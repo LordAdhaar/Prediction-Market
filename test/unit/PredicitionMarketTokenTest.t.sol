@@ -15,8 +15,8 @@ contract PredictionMarketEngineTest is Test {
         predictionMarketToken = new PredictionMarketToken(owner);
     }
 
-    function testMint() external {
-        vm.prank(owner);
+    function testUserMint() external {
+        vm.prank(alice);
         predictionMarketToken.mint(alice, 100);
 
         assertEq(predictionMarketToken.balanceOf(alice), 100);
